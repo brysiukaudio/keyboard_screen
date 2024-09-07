@@ -52,5 +52,7 @@ Mkfile.old
 dkms.conf
 
 # Build Folder
+build
+.vscode
 ../build
 ../.vscode
