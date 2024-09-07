@@ -36,6 +36,10 @@ file(GLOB test_SRC
   "*.cpp"
   "*.c"
   "pico_pio_usb/*.c"
+  "usb_descriptors.c"
+  # can use 'tinyusb_pico_pio_usb' library later when pico-sdk is updated
+  ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
+  ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
 )
 add_executable(Test ${test_SRC})
 
@@ -44,9 +48,10 @@ pico_set_program_version(Test "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(Test 0)
-pico_enable_stdio_usb(Test 1)
+pico_enable_stdio_usb(Test 0)
 
-
+# use tinyusb implementation
+# target_compile_definitions(${target_name} PRIVATE PIO_USB_USE_TINYUSB)
 
 # Add the standard include files to the build
 target_include_directories(Test PRIVATE
@@ -57,7 +62,7 @@ target_include_directories(Test PRIVATE
 
 # Add the standard library to the build
 target_link_libraries(Test
-        pico_stdlib pico_multicore hardware_pio hardware_dma)
+        pico_stdlib pico_multicore hardware_pio hardware_dma tinyusb_device tinyusb_host)
 
 pico_add_extra_outputs(Test)
 
