@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "lcd_comm.h"
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/uart.h"
@@ -32,7 +33,12 @@
 
 #define RGB_MASK (1 << R_LED | 1 << G_LED | 1 << B_LED)
 
+void cdc_app_task(void);
+
 static usb_device_t *usb_device = NULL;
+static Lcd_Comm *screen = NULL;
+static uint32_t connected = 0;
+static uint8_t cleared = 0;
 void core1_main() {
     sleep_ms(10);
 
@@ -51,6 +57,7 @@ void core1_main() {
     tuh_init(1);
     while (true) {
         tuh_task();
+        cdc_app_task();
     }
 }
 
@@ -68,7 +75,7 @@ void heartbeat()
         NEXT_LED = temp;
         timeout = make_timeout_time_ms(1000);
         char tempbuf[256];
-        int count = sprintf(tempbuf, "Alive\r\n");
+        int count = sprintf(tempbuf, "Alive, Connected: %d, Cleared: %d\r\n", connected, cleared);
         tud_cdc_write(tempbuf, count);
     }
 }
@@ -150,20 +157,59 @@ void tud_cdc_rx_cb(uint8_t itf)
 // Host CDC
 //--------------------------------------------------------------------+
 
+void cdc_app_task(void) {
+    char tempbuf[256];
+    if (!cleared && screen != NULL) {
+        screen->SendCommand(CLEAR, 0,0,0,0);
+        cleared = 1;
+    }
+}
+
+// Invoked when received new data
+void tuh_cdc_rx_cb(uint8_t idx) {
+    uint8_t buf[64 + 1]; // +1 for extra null character
+    char tempbuf[256];
+    uint32_t const bufsize = sizeof(buf) - 1;
+
+    // forward cdc interfaces -> console
+    uint32_t count = tuh_cdc_read(idx, buf, bufsize);
+    buf[count] = 0;
+
+    count = sprintf(tempbuf, "%s", (char*) buf);
+    tud_cdc_write(tempbuf, count);
+    tud_cdc_write_flush();
+}
+
 void tuh_cdc_mount_cb(uint8_t idx)
 {
-  char tempbuf[256];
-  int count = sprintf(tempbuf, "Mount IDX: %d\r\n",idx);
+    char tempbuf[256];
+    int count = 0;
+    tuh_itf_info_t itf_info = {0};
+    tuh_cdc_itf_get_info(idx, &itf_info);
+    connected |= 1 << idx;
+    count = sprintf(tempbuf,"CDC Interface is mounted: address = %u, itf_num = %u\r\n", itf_info.daddr,
+         itf_info.desc.bInterfaceNumber);
+    tud_cdc_write(tempbuf, count);
+    tud_cdc_write_flush();
+    // while eneumerating new cdc device
+    cdc_line_coding_t line_coding = {0};
+    if (tuh_cdc_get_local_line_coding(idx, &line_coding)) {
+        count = sprintf(tempbuf,"  Baudrate: %" PRIu32 ", Stop Bits : %u\r\n", line_coding.bit_rate, line_coding.stop_bits);
+        tud_cdc_write(tempbuf, count);
+        count = sprintf(tempbuf,"  Parity  : %u, Data Width: %u\r\n", line_coding.parity, line_coding.data_bits);
+        tud_cdc_write(tempbuf, count);
+    }
 
-  tud_cdc_write(tempbuf, count);
-  tud_cdc_write_flush();
+    screen = new Lcd_Comm(idx);
 }
 
 // Invoked when device with hid interface is un-mounted
 void tuh_cdc_umount_cb(uint8_t idx)
 {
-  char tempbuf[256];
-  int count = sprintf(tempbuf, "Unmounted IDX: %d", idx);
-  tud_cdc_write(tempbuf, count);
-  tud_cdc_write_flush();
+    char tempbuf[256];
+    int count = sprintf(tempbuf, "Unmounted IDX: %d \r\n", idx);
+    delete screen;
+    screen = NULL;
+    tud_cdc_write(tempbuf, count);
+    tud_cdc_write_flush();
 }

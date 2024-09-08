@@ -32,16 +32,20 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-file(GLOB test_SRC
-  "*.cpp"
-  "*.c"
-  "pico_pio_usb/*.c"
-  "usb_descriptors.c"
-  # can use 'tinyusb_pico_pio_usb' library later when pico-sdk is updated
-  ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
-  ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
-)
-add_executable(Test ${test_SRC})
+add_executable(Test)
+
+target_sources(Test PRIVATE
+ Test.cpp
+ lcd_comm.cpp
+ pico_pio_usb/pio_usb.c
+ pico_pio_usb/pio_usb_device.c
+ pico_pio_usb/pio_usb_host.c
+ pico_pio_usb/usb_crc.c
+ usb_descriptors.c
+ # can use 'tinyusb_pico_pio_usb' library later when pico-sdk is updated
+ ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
+ ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
+ )
 
 pico_set_program_name(Test "Test")
 pico_set_program_version(Test "0.1")
