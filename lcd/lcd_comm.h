@@ -1,3 +1,4 @@
+#pragma once
 #include "pico/stdlib.h"
 
 enum Orientation {
@@ -22,11 +23,18 @@ class Lcd_Comm{
 public:
     Lcd_Comm(int idx);
     ~Lcd_Comm();
+    void SetOrientation(uint32_t orientation);
     void SendCommand(uint32_t cmd, uint32_t x, uint32_t y, uint32_t ex, uint32_t ey);
+    uint32_t WriteAvailable();
+    void WriteData(uint8_t* data, uint32_t data_size, bool flush = true);
 
+    uint32_t GetWidth();
+    uint32_t GetHeight();
+    uint32_t GetOrientation() { return m_orientation; };
 
 private:
-    uint32_t com_idx;
-    uint32_t display_width;
-    uint32_t display_height;
+    uint32_t m_com_idx;
+    uint32_t m_display_width;
+    uint32_t m_display_height;
+    uint32_t m_orientation;
 };

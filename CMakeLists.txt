@@ -37,6 +37,7 @@ add_executable(screen_control)
 target_sources(screen_control PRIVATE
  main.cpp
  lcd/lcd_comm.cpp
+ lcd/image_handler.cpp
  usb/pico_pio_usb/pio_usb.c
  usb/pico_pio_usb/pio_usb_device.c
  usb/pico_pio_usb/pio_usb_host.c
@@ -63,12 +64,13 @@ target_include_directories(screen_control PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/usb/pico_pio_usb
   ${CMAKE_CURRENT_LIST_DIR}/usb
   ${CMAKE_CURRENT_LIST_DIR}/lcd
+  ${CMAKE_CURRENT_LIST_DIR}/img_data
   ${CMAKE_CURRENT_LIST_DIR}/.. # for our common lwipopts or any other standard includes, if required
 )
 
 # Add the standard library to the build
 target_link_libraries(screen_control
-        pico_stdlib pico_multicore hardware_pio hardware_dma tinyusb_device tinyusb_host)
+        pico_stdlib pico_multicore pico_mem_ops hardware_pio hardware_dma tinyusb_device tinyusb_host)
 
 pico_add_extra_outputs(screen_control)
 

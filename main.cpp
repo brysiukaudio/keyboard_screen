@@ -1,5 +1,8 @@
 #include <stdio.h>
-#include "lcd_comm.h"
+#include "lcd/lcd_comm.h"
+#include "lcd/image_handler.h"
+#include "img_data/climb.h"
+#include "img_data/climb_2.h"
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/uart.h"
@@ -37,6 +40,8 @@ void cdc_app_task(void);
 
 static usb_device_t *usb_device = NULL;
 static Lcd_Comm *screen = NULL;
+static Image_Handler *climb_image = NULL;
+static Image_Handler *climb_2_image = NULL;
 static uint32_t connected = 0;
 static uint8_t cleared = 0;
 void core1_main() {
@@ -69,7 +74,7 @@ void heartbeat()
         NEXT_LED = temp;
         timeout = make_timeout_time_ms(1000);
         char tempbuf[256];
-        int count = sprintf(tempbuf, "Alive, Connected: %d, Cleared: %d\r\n", connected, cleared);
+        int count = sprintf(tempbuf, "Alive, Connected: %d, Buffer Size: %d\r\n", connected, screen->WriteAvailable());
         tud_cdc_write(tempbuf, count);
     }
 }
@@ -120,10 +125,22 @@ void tud_cdc_rx_cb(uint8_t itf)
 //--------------------------------------------------------------------+
 
 void cdc_app_task(void) {
-    char tempbuf[256];
-    if (!cleared && screen != NULL) {
-        screen->SendCommand(CLEAR, 0,0,0,0);
-        cleared = 1;
+    bool toggle = true;
+    static absolute_time_t timeout = make_timeout_time_ms(10000);
+    absolute_time_t current_time = get_absolute_time();
+    if (current_time >= timeout) {
+        timeout = make_timeout_time_ms(10000);
+        toggle = !toggle;
+    }
+
+    if (screen != NULL && climb_image != NULL && toggle) {
+        
+        climb_2_image->DisplayImage();
+    }
+
+    if (screen != NULL && climb_2_image != NULL && !toggle) {
+        
+        climb_image->DisplayImage();
     }
 }
 
@@ -163,6 +180,8 @@ void tuh_cdc_mount_cb(uint8_t idx)
     }
 
     screen = new Lcd_Comm(idx);
+    climb_image = new Image_Handler(screen,climb,climb_width,climb_height,climb_size);
+    climb_2_image = new Image_Handler(screen,climb_2,climb_2_width,climb_2_height,climb_2_size);
 }
 
 // Invoked when device with hid interface is un-mounted
