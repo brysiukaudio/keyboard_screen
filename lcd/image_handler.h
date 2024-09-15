@@ -3,21 +3,22 @@
 #include "pico/stdlib.h"
 #include "string.h"
 #include "lcd_comm.h"
+#include "image.h"
 
 class Image_Handler{
 public:
-    Image_Handler(Lcd_Comm* lcd, uint8_t* image, uint32_t image_width, uint32_t image_height, uint32_t image_size);
+    Image_Handler(Lcd_Comm* lcd);
     ~Image_Handler();
     void DisplayImage();
+    void NextImage();
 private:
 
     void SetupImage();
     Lcd_Comm* m_lcd;
-    uint8_t* m_image;
-    uint32_t m_image_size;
-    uint32_t m_image_width;
-    uint32_t m_image_width_bytes;
-    uint32_t m_image_height;
+
+    Image ** m_images;
+    uint32_t m_num_images;
+    uint32_t m_currentImageIdx;
 
     uint8_t* rearrange_buffer;
     uint32_t m_rab_data;

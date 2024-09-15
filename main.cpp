@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include "lcd/lcd_comm.h"
 #include "lcd/image_handler.h"
-#include "img_data/climb.h"
-#include "img_data/climb_2.h"
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/uart.h"
@@ -40,10 +38,11 @@ void cdc_app_task(void);
 
 static usb_device_t *usb_device = NULL;
 static Lcd_Comm *screen = NULL;
-static Image_Handler *climb_image = NULL;
-static Image_Handler *climb_2_image = NULL;
+static Image_Handler *image_handler = NULL;
 static uint32_t connected = 0;
 static uint8_t cleared = 0;
+static uint8_t delay = 0;
+static uint8_t writeable = 0;
 void core1_main() {
     sleep_ms(10);
 
@@ -125,23 +124,33 @@ void tud_cdc_rx_cb(uint8_t itf)
 //--------------------------------------------------------------------+
 
 void cdc_app_task(void) {
-    bool toggle = true;
     static absolute_time_t timeout = make_timeout_time_ms(10000);
     absolute_time_t current_time = get_absolute_time();
-    if (current_time >= timeout) {
+
+    if (cleared) 
+    {
+        timeout = make_timeout_time_ms(3000);
+        delay = 1;
+        cleared = 0;
+    }
+
+    if (delay && current_time >= timeout) {
+        writeable = 1;
+        delay = 0;
         timeout = make_timeout_time_ms(10000);
-        toggle = !toggle;
     }
 
-    if (screen != NULL && climb_image != NULL && toggle) {
-        
-        climb_2_image->DisplayImage();
+    if (writeable) {
+        if (current_time >= timeout) {
+            timeout = make_timeout_time_ms(10000);
+            image_handler->NextImage();
+        }
+
+        if (screen != NULL && image_handler != NULL) {
+            image_handler->DisplayImage();
+        }
     }
 
-    if (screen != NULL && climb_2_image != NULL && !toggle) {
-        
-        climb_image->DisplayImage();
-    }
 }
 
 // Invoked when received new data
@@ -180,8 +189,10 @@ void tuh_cdc_mount_cb(uint8_t idx)
     }
 
     screen = new Lcd_Comm(idx);
-    climb_image = new Image_Handler(screen,climb,climb_width,climb_height,climb_size);
-    climb_2_image = new Image_Handler(screen,climb_2,climb_2_width,climb_2_height,climb_2_size);
+    // screen->Reset();
+    screen->Clear();
+    cleared = 1;
+    image_handler = new Image_Handler(screen);
 }
 
 // Invoked when device with hid interface is un-mounted

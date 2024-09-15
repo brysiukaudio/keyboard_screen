@@ -84,3 +84,17 @@ void Lcd_Comm::SetOrientation(uint32_t orientation)
     byteBuffer[10] = (height & 255);
     WriteData(byteBuffer,bufsize);
 }
+
+void Lcd_Comm::Reset() 
+{
+    if (!m_has_reset) {
+        SendCommand(RESET,0,0,0,0);
+        m_has_reset = true;
+    }
+}
+
+void Lcd_Comm::Clear() 
+{
+    SetOrientation(PORTRAIT);
+    SendCommand(CLEAR,0,0,0,0);
+}
